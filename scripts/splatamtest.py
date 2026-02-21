@@ -878,8 +878,37 @@ def rgbd_slam(config: dict):
 
     # Финальная оценка (eval) – нужно адаптировать для подкарт. Пока оставляем без изменений, но может не работать.
     # Пропускаем для простоты.
+        # -------------------------------------------------------------------- #
+    # Финальная оценка и сохранение результатов
+    # -------------------------------------------------------------------- #
+    from utils.submap import merge_submaps
+    from utils.eval_helpers import eval
+    from utils.common_utils import save_params
 
+    # Объединяем все подкарты в один params
+    merged_params, merged_vars = merge_submaps(submaps, global_cam_rots, global_cam_trans)
+
+    # Запускаем оценку
+    with torch.no_grad():
+        if config['use_wandb']:
+            eval(dataset, merged_params, num_frames, eval_dir,
+                 sil_thres=config['mapping']['sil_thres'],
+                 wandb_run=wandb_run,
+                 wandb_save_qual=config['wandb']['eval_save_qual'],
+                 mapping_iters=config['mapping']['num_iters'],
+                 add_new_gaussians=config['mapping']['add_new_gaussians'],
+                 eval_every=config['eval_every'])
+        else:
+            eval(dataset, merged_params, num_frames, eval_dir,
+                 sil_thres=config['mapping']['sil_thres'],
+                 mapping_iters=config['mapping']['num_iters'],
+                 add_new_gaussians=config['mapping']['add_new_gaussians'],
+                 eval_every=config['eval_every'])
+
+    # Сохраняем объединённые параметры (как в оригинале)
+    save_params(merged_params, output_dir)
     # Сохранение результатов – пока не реализовано
+    
     # Close WandB Run
     if config['use_wandb']:
         wandb.finish()

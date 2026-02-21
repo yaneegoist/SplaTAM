@@ -181,3 +181,45 @@ class Submap:
         self.first_frame_w2c = data['first_frame_w2c'].cuda()
         self.intrinsics = data['intrinsics'].cuda()
         self.id = data['id']
+
+
+def merge_submaps(submaps, global_cam_rots, global_cam_trans):
+    """
+    Объединяет параметры гауссианов из всех подкарт в один словарь params,
+    а также объединяет variables. Возвращает единый params, variables.
+    """
+    if len(submaps) == 0:
+        return None, None
+
+    # Список ключей для объединения
+    param_keys = ['means3D', 'rgb_colors', 'unnorm_rotations', 'logit_opacities', 'log_scales']
+    var_keys = ['max_2D_radius', 'means2D_gradient_accum', 'denom', 'timestep']
+
+    # Если только одна подкарта, просто копируем
+    if len(submaps) == 1:
+        params = {k: v.clone().detach() for k, v in submaps[0].params.items()}
+        variables = submaps[0].variables.copy()
+        # Добавляем камерные параметры
+        params['cam_unnorm_rots'] = global_cam_rots.detach().clone()
+        params['cam_trans'] = global_cam_trans.detach().clone()
+        return params, variables
+
+    # Несколько подкарт: конкатенируем тензоры
+    merged_params = {}
+    for key in param_keys:
+        tensors = [submap.params[key].detach() for submap in submaps]
+        merged_params[key] = torch.cat(tensors, dim=0)
+
+    # Добавляем камерные параметры (они глобальные)
+    merged_params['cam_unnorm_rots'] = global_cam_rots.detach().clone()
+    merged_params['cam_trans'] = global_cam_trans.detach().clone()
+
+    merged_vars = {}
+    for key in var_keys:
+        tensors = [submap.variables[key].detach() for submap in submaps]
+        merged_vars[key] = torch.cat(tensors, dim=0)
+
+    # Скалярные переменные (берём из последней подкарты)
+    merged_vars['scene_radius'] = submaps[-1].variables['scene_radius']
+
+    return merged_params, merged_vars
