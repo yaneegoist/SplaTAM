@@ -827,7 +827,7 @@ def rgbd_slam(config: dict):
                 'w2c': curr_w2c.clone().detach(),
                 'cam': cam
             }
-            new_submap = Submap(submap_id=len(submaps), first_frame_data, config, num_frames)
+            new_submap = Submap(len(submaps), first_frame_data, config, num_frames)
             submaps.append(new_submap)
             active_submap = new_submap
             print(f"Created new submap {active_submap.id} at frame {time_idx}")

@@ -34,8 +34,6 @@ from utils.slam_helpers import (
 )
 from utils.slam_external import calc_ssim, build_rotation, prune_gaussians, densify
 
-from utils.submap import Submap
-
 from diff_gaussian_rasterization import GaussianRasterizer as Renderer
 
 
