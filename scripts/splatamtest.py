@@ -644,7 +644,7 @@ def rgbd_slam(config: dict):
                 temp_trans[..., time_idx] = curr_cam_tran
 
                 loss, new_vars, losses = get_loss_with_cam(
-                    active_submap.params, tracking_curr_data, active_submap.variables,
+                    active_submap.params, curr_data, active_submap.variables,
                     iter_time_idx, config['tracking']['loss_weights'],
                     config['tracking']['use_sil_for_loss'], config['tracking']['sil_thres'],
                     config['tracking']['use_l1'], config['tracking']['ignore_outlier_depth_loss'],
