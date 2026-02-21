@@ -49,6 +49,19 @@ def get_pointcloud(color, depth, intrinsics, w2c, transform_pts=True,
         return point_cld, mean3_sq_dist
     else:
         return point_cld
+    
+def save_checkpoint(self, path):
+    """Сохраняет состояние подкарты в файл."""
+    torch.save({
+        'id': self.id,
+        'params': {k: v.detach().cpu() for k, v in self.params.items()},
+        'variables': self.variables,
+        'keyframes': self.keyframes,
+        'keyframe_indices': self.keyframe_indices,
+        'first_frame_w2c': self.first_frame_w2c.cpu(),
+        'intrinsics': self.intrinsics.cpu(),
+        'cam': self.cam,  # может быть несохраняемым, но попробуем
+    }, path)
 
 
 class Submap:

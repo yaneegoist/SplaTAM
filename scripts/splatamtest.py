@@ -808,6 +808,30 @@ def rgbd_slam(config: dict):
             mapping_end_time = time.time()
             mapping_frame_time_sum += mapping_end_time - mapping_start_time
             mapping_frame_time_count += 1
+        
+                # ------------------------------------------------------------ #
+        # SUBMAP: создание новой подкарты по интервалу
+        # ------------------------------------------------------------ #
+        if time_idx > 0 and config.get('new_submap_every', 0) > 0 and (time_idx + 1) % config['new_submap_every'] == 0:
+            # Сохраняем текущую подкарту (опционально)
+            submap_ckpt_path = os.path.join(output_dir, f"submap_{active_submap.id:06d}.pt")
+            active_submap.save_checkpoint(submap_ckpt_path)
+            print(f"Saved submap {active_submap.id} to {submap_ckpt_path}")
+            
+            # Создаём новую подкарту с текущим кадром как первым
+            # Используем curr_w2c, которая уже вычислена в блоке маппинга
+            first_frame_data = {
+                'im': color,
+                'depth': depth,
+                'intrinsics': intrinsics,
+                'w2c': curr_w2c.clone().detach(),
+                'cam': cam
+            }
+            new_submap = Submap(submap_id=len(submaps), first_frame_data, config, num_frames)
+            submaps.append(new_submap)
+            active_submap = new_submap
+            print(f"Created new submap {active_submap.id} at frame {time_idx}")
+        # ------------------------------------------------------------ #
 
         # Добавление ключевого кадра в активную подкарту
         if ((time_idx == 0) or ((time_idx+1) % config['keyframe_every'] == 0) or \
