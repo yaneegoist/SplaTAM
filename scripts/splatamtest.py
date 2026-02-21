@@ -733,17 +733,13 @@ def rgbd_slam(config: dict):
                 curr_w2c[:3, :3] = build_rotation(curr_cam_rot)
                 curr_w2c[:3, 3] = curr_cam_tran
 
-                # Используем ключевые кадры из активной подкарты
                 keyframes_for_selection = active_submap.keyframes
-                num_keyframes = config['mapping_window_size'] - 2
-                # keyframe_selection_overlap ожидает список keyframe_list с полями 'est_w2c', 'depth'
-                # У нас в keyframes есть 'w2c', нужно преобразовать.
-                # Пока упростим: будем использовать все ключевые кадры подкарты.
-                selected_keyframes = list(range(len(keyframes_for_selection)))  # все
+                # Индексы ключевых кадров в списке keyframes_for_selection
+                selected_keyframes = list(range(len(keyframes_for_selection)))
                 selected_time_idx = [kf['id'] for kf in keyframes_for_selection]
-                if len(selected_keyframes) > 0:
-                    selected_time_idx.append(time_idx)
-                    selected_keyframes.append(-1)  # -1 означает текущий кадр
+                # Всегда добавляем текущий кадр (даже для первого кадра)
+                selected_time_idx.append(time_idx)
+                selected_keyframes.append(-1)
                 print(f"\nSelected Keyframes at Frame {time_idx}: {selected_time_idx}")
 
             # Оптимизация подкарты
