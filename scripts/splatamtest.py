@@ -809,7 +809,7 @@ def rgbd_slam(config: dict):
             mapping_frame_time_sum += mapping_end_time - mapping_start_time
             mapping_frame_time_count += 1
         
-                # ------------------------------------------------------------ #
+        # ------------------------------------------------------------ #
         # SUBMAP: создание новой подкарты по интервалу
         # ------------------------------------------------------------ #
         if time_idx > 0 and config.get('new_submap_every', 0) > 0 and (time_idx + 1) % config['new_submap_every'] == 0:
@@ -831,7 +831,7 @@ def rgbd_slam(config: dict):
             submaps.append(new_submap)
             active_submap = new_submap
             print(f"Created new submap {active_submap.id} at frame {time_idx}")
-        # ------------------------------------------------------------ #
+        # ------------------------------------------------------------ # 
 
         # Добавление ключевого кадра в активную подкарту
         if ((time_idx == 0) or ((time_idx+1) % config['keyframe_every'] == 0) or \
@@ -908,7 +908,7 @@ def rgbd_slam(config: dict):
     # Сохраняем объединённые параметры (как в оригинале)
     save_params(merged_params, output_dir)
     # Сохранение результатов – пока не реализовано
-    
+
     # Close WandB Run
     if config['use_wandb']:
         wandb.finish()

@@ -38,6 +38,7 @@ config = dict(
     checkpoint_interval=100, # Checkpoint Interval
     use_wandb=True,
     new_submap_every = 10,  # создавать новую подкарту каждые n кадров
+    submap_overlap_frames = 5,
     wandb=dict(
         entity="theairlab",
         project="SplaTAM",

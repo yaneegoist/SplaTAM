@@ -78,7 +78,7 @@ class Submap:
         self.num_frames_global = num_frames_global  # общее число кадров (для инициализации поз камеры)
 
         # Инициализация подкарты первым кадром
-        self.initialize_from_first_frame(first_frame_data, config)
+        self.initialize_from_frames([first_frame_data], config)
 
     def initialize_from_first_frame(self, frame_data, config):
         """Инициализирует params и variables из первого кадра (аналог initialize_first_timestep)."""
@@ -129,6 +129,68 @@ class Submap:
             'denom': torch.zeros(params['means3D'].shape[0]).cuda().float(),
             'timestep': torch.zeros(params['means3D'].shape[0]).cuda().float(),
             'scene_radius': torch.max(depth) / config['scene_radius_depth_ratio']
+        }
+
+        self.params = params
+        self.variables = variables
+
+    def initialize_from_frames(self, frames_data, config):
+        """
+        frames_data: список словарей с ключами 'im', 'depth', 'w2c', 'cam', 'intrinsics'
+        """
+        all_pts = []
+        all_mean_sq_dist = []
+        for frame in frames_data:
+            color = frame['im']
+            depth = frame['depth']
+            intrinsics = frame['intrinsics']
+            w2c = frame['w2c']
+            mask = (depth > 0).reshape(-1)
+            # Используем внешнюю функцию get_pointcloud
+            pts, mean_sq_dist = get_pointcloud(
+                color, depth, intrinsics, w2c,
+                mask=mask, compute_mean_sq_dist=True,
+                mean_sq_dist_method=config['mean_sq_dist_method']
+            )
+            all_pts.append(pts)
+            all_mean_sq_dist.append(mean_sq_dist)
+
+        # Объединяем все точки
+        init_pt_cld = torch.cat(all_pts, dim=0)
+        mean3_sq_dist = torch.cat(all_mean_sq_dist, dim=0)
+
+        # Инициализируем параметры (копируем логику initialize_params без камерных параметров)
+        num_pts = init_pt_cld.shape[0]
+        means3D = init_pt_cld[:, :3]
+        unnorm_rots = np.tile([1, 0, 0, 0], (num_pts, 1))
+        logit_opacities = torch.zeros((num_pts, 1), dtype=torch.float, device="cuda")
+        gaussian_distribution = config['gaussian_distribution']
+        if gaussian_distribution == "isotropic":
+            log_scales = torch.tile(torch.log(torch.sqrt(mean3_sq_dist))[..., None], (1, 1))
+        elif gaussian_distribution == "anisotropic":
+            log_scales = torch.tile(torch.log(torch.sqrt(mean3_sq_dist))[..., None], (1, 3))
+        else:
+            raise ValueError(f"Unknown gaussian_distribution {gaussian_distribution}")
+
+        params = {
+            'means3D': means3D,
+            'rgb_colors': init_pt_cld[:, 3:6],
+            'unnorm_rotations': unnorm_rots,
+            'logit_opacities': logit_opacities,
+            'log_scales': log_scales,
+        }
+        for k, v in params.items():
+            if not isinstance(v, torch.Tensor):
+                params[k] = torch.nn.Parameter(torch.tensor(v).cuda().float().contiguous().requires_grad_(True))
+            else:
+                params[k] = torch.nn.Parameter(v.cuda().float().contiguous().requires_grad_(True))
+
+        variables = {
+            'max_2D_radius': torch.zeros(params['means3D'].shape[0]).cuda().float(),
+            'means2D_gradient_accum': torch.zeros(params['means3D'].shape[0]).cuda().float(),
+            'denom': torch.zeros(params['means3D'].shape[0]).cuda().float(),
+            'timestep': torch.zeros(params['means3D'].shape[0]).cuda().float(),
+            'scene_radius': torch.max(frames_data[0]['depth']) / config['scene_radius_depth_ratio']
         }
 
         self.params = params
