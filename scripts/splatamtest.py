@@ -553,7 +553,7 @@ def rgbd_slam(config: dict):
         'w2c': first_w2c,
         'cam': cam
     }
-    submap0 = Submap(submap_id=0, first_frame_data, config, num_frames=num_frames)
+    submap0 = Submap(0, first_frame_data, config, num_frames)
     submaps = [submap0]
     active_submap = submaps[0]
 
